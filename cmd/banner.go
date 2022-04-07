@@ -3,11 +3,11 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	helper "github.com/home-assistant/cli/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const haBanner = `
@@ -20,13 +20,10 @@ const haBanner = `
 Welcome to the Home Assistant command line.
 `
 
-func pokeAPI(section string, command string) (outdata *(map[string]interface{})) {
-	base := viper.GetString("endpoint")
-
-	resp, err := helper.GenericJSONGet(base, section, command)
+func supervisorGet(section string, command string) (outdata *(map[string]interface{}), err error) {
+	resp, err := helper.GenericJSONGet(section, command)
 	if err != nil {
-		fmt.Println(err)
-		ExitWithError = true
+		return nil, err
 	}
 
 	var data *helper.Response
@@ -36,16 +33,13 @@ func pokeAPI(section string, command string) (outdata *(map[string]interface{}))
 		data = resp.Error().(*helper.Response)
 	}
 	if data.Result == "ok" {
-		if len(data.Data) == 0 {
-			fmt.Println("Command completed successfully.")
-		} else {
+		if len(data.Data) > 0 {
 			outdata = &(data.Data)
 		}
 	} else {
-		fmt.Println("No result from API - Supervisor not (yet) running.")
-		ExitWithError = true
+		return nil, fmt.Errorf("Error returned from Supervisor: %s", data.Message)
 	}
-	return
+	return outdata, nil
 }
 
 func getAddresses(addresses []interface{}) string {
@@ -69,9 +63,39 @@ var bannerCmd = &cobra.Command{
 		fmt.Print(haBanner)
 		fmt.Println()
 
-		fmt.Println("System information")
+		nowait, err := cmd.Flags().GetBool("no-wait")
+		if err != nil {
+			fmt.Println(err)
+			ExitWithError = true
+		}
 
-		netinfo := pokeAPI("network", "info")
+		if !nowait {
+			for i := 0; i < 60; i++ {
+				// We could use ping here, but Supervisor loads networking data asynchronously.
+				// Networking info are very useful, so wait until networking data have been
+				// loaded...
+				netinfo, err := supervisorGet("network", "info")
+				if err == nil && netinfo != nil {
+
+					netifaces, exist := (*netinfo)["interfaces"]
+					if exist && len(netifaces.([]interface{})) > 0 {
+						break
+					}
+				}
+				if i == 0 {
+					fmt.Println("Waiting for Supervisor to startup...")
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}
+
+		fmt.Println("System information")
+		netinfo, err := supervisorGet("network", "info")
+		if err != nil {
+			fmt.Println(err)
+			ExitWithError = true
+			return
+		}
 		if netinfo == nil {
 			return
 		}
@@ -105,11 +129,21 @@ var bannerCmd = &cobra.Command{
 		fmt.Println()
 
 		// Print Host URL
-		hostinfo := pokeAPI("host", "info")
+		hostinfo, err := supervisorGet("host", "info")
+		if err != nil {
+			fmt.Println(err)
+			ExitWithError = true
+			return
+		}
 		if hostinfo == nil {
 			return
 		}
-		coreinfo := pokeAPI("core", "info")
+		coreinfo, err := supervisorGet("core", "info")
+		if err != nil {
+			fmt.Println(err)
+			ExitWithError = true
+			return
+		}
 		if coreinfo == nil {
 			return
 		}
@@ -130,4 +164,5 @@ var bannerCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(bannerCmd)
+	bannerCmd.Flags().Bool("no-wait", false, "Don't wait until Supervisor is started")
 }

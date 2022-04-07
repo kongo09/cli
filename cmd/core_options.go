@@ -6,7 +6,6 @@ import (
 	helper "github.com/home-assistant/cli/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var coreOptionsCmd = &cobra.Command{
@@ -23,19 +22,22 @@ instance running on your Home Assistant system.`,
 
 		section := "core"
 		command := "options"
-		base := viper.GetString("endpoint")
 
 		options := make(map[string]interface{})
 
 		for _, value := range []string{
 			"image",
-			"last_version",
-			"password",
 			"refresh_token",
+			"audio_output",
+			"audio_input",
 		} {
 			val, err := cmd.Flags().GetString(value)
-			if val != "" && err == nil && cmd.Flags().Changed(value) {
-				options[value] = val
+			if err == nil && cmd.Flags().Changed(value) {
+				if val == "" {
+					options[value] = nil
+				} else {
+					options[value] = val
+				}
 			}
 		}
 
@@ -49,17 +51,18 @@ instance running on your Home Assistant system.`,
 			options["wait_boot"] = waitBoot
 		}
 
-		ssl, err := cmd.Flags().GetBool("ssl")
-		if err == nil && cmd.Flags().Changed("ssl") {
-			options["ssl"] = ssl
+		for _, value := range []string{
+			"boot",
+			"ssl",
+			"watchdog",
+		} {
+			val, err := cmd.Flags().GetBool(value)
+			if err == nil && cmd.Flags().Changed(value) {
+				options[value] = val
+			}
 		}
 
-		watchdog, err := cmd.Flags().GetBool("watchdog")
-		if err == nil && cmd.Flags().Changed("watchdog") {
-			options["watchdog"] = watchdog
-		}
-
-		resp, err := helper.GenericJSONPost(base, section, command, options)
+		resp, err := helper.GenericJSONPost(section, command, options)
 		if err != nil {
 			fmt.Println(err)
 			ExitWithError = true
@@ -70,13 +73,14 @@ instance running on your Home Assistant system.`,
 }
 
 func init() {
+	coreOptionsCmd.Flags().Bool("boot", true, "Start Core on boot")
 	coreOptionsCmd.Flags().String("image", "", "Optional image")
-	coreOptionsCmd.Flags().String("last_version", "", "Optional for custom image")
-	coreOptionsCmd.Flags().Int("port", 8123, "Port for access Home Assistant")
+	coreOptionsCmd.Flags().Int("port", 8123, "Port to access Home Assistant Core")
 	coreOptionsCmd.Flags().Bool("ssl", false, "Use SSL")
-	coreOptionsCmd.Flags().String("password", "", "API password")
-	coreOptionsCmd.Flags().String("refresh_token", "", "Refresh token")
 	coreOptionsCmd.Flags().Bool("watchdog", true, "Use watchdog")
-	coreOptionsCmd.Flags().Int("wait_boot", 600, "wait_boot")
+	coreOptionsCmd.Flags().Int("wait_boot", 600, "Time to wait for Core to startup")
+	coreOptionsCmd.Flags().String("refresh_token", "", "Refresh token")
+	coreOptionsCmd.Flags().String("audio_input", "", "Profile name for audio input")
+	coreOptionsCmd.Flags().String("audio_output", "", "Profile name for audio output")
 	coreCmd.AddCommand(coreOptionsCmd)
 }

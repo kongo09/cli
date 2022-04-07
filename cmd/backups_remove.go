@@ -8,27 +8,25 @@ import (
 	helper "github.com/home-assistant/cli/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var snapshotsRemoveCmd = &cobra.Command{
+var backupsRemoveCmd = &cobra.Command{
 	Use:     "remove [slug]",
 	Aliases: []string{"delete", "del", "rem", "rm"},
-	Short:   "Deletes a snapshot backup from disk",
+	Short:   "Deletes a backup from disk",
 	Long: `
-Snapshots can take quite a bit of diskspace, this command allows you to
-clean snapshots from disk.`,
+Backups can take quite a bit of diskspace, this command allows you to
+clean backups from disk.`,
 	Example: `
-  ha snapshots remove c1a07617`,
+  ha backups remove c1a07617`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.WithField("args", args).Debug("snapshots remove")
+		log.WithField("args", args).Debug("backups remove")
 
-		section := "snapshots"
+		section := "backups"
 		command := "{slug}"
-		base := viper.GetString("endpoint")
 
-		url, err := helper.URLHelper(base, section, command)
+		url, err := helper.URLHelper(section, command)
 		if err != nil {
 			fmt.Println(err)
 			ExitWithError = true
@@ -67,5 +65,5 @@ clean snapshots from disk.`,
 
 func init() {
 
-	snapshotsCmd.AddCommand(snapshotsRemoveCmd)
+	backupsCmd.AddCommand(backupsRemoveCmd)
 }

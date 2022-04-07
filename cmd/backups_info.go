@@ -8,27 +8,25 @@ import (
 	helper "github.com/home-assistant/cli/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var snapshotsInfoCmd = &cobra.Command{
+var backupsInfoCmd = &cobra.Command{
 	Use:     "info [slug]",
 	Aliases: []string{"in", "inf"},
-	Short:   "Provides information about the current available snapshots",
+	Short:   "Provides information about the current available backups",
 	Long: `
-When a Home Assistant snapshot is created, it will be available for restore.
-This command gives you information about a specific snapshot.`,
+When a Home Assistant backup is created, it will be available for restore.
+This command gives you information about a specific backup.`,
 	Example: `
-  ha snapshots info c1a07617`,
+  ha backups info c1a07617`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.WithField("args", args).Debug("snapshots info")
+		log.WithField("args", args).Debug("backups info")
 
-		section := "snapshots"
+		section := "backups"
 		command := "{slug}/info"
-		base := viper.GetString("endpoint")
 
-		url, err := helper.URLHelper(base, section, command)
+		url, err := helper.URLHelper(section, command)
 
 		if err != nil {
 			fmt.Println(err)
@@ -67,5 +65,5 @@ This command gives you information about a specific snapshot.`,
 }
 
 func init() {
-	snapshotsCmd.AddCommand(snapshotsInfoCmd)
+	backupsCmd.AddCommand(backupsInfoCmd)
 }

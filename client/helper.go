@@ -1,19 +1,26 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"path"
-	"encoding/json"
+	"time"
 
+	yaml "github.com/ghodss/yaml"
+	resty "github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	resty "github.com/go-resty/resty/v2"
-	yaml "github.com/ghodss/yaml"
 
 	"strings"
 )
+
+const DefaultTimeout = 30 * time.Second
+const ContainerOperationTimeout = 10 * time.Minute
+const ContainerDownloadTimeout = 1 * time.Hour
+const OsDownloadTimeout = 1 * time.Hour
+const BackupTimeout = 3 * time.Hour
 
 var client *resty.Client
 
@@ -25,7 +32,8 @@ type Response struct {
 }
 
 // URLHelper returns a URL built from the arguments
-func URLHelper(base, section, command string) (string, error) {
+func URLHelper(section, command string) (string, error) {
+	base := viper.GetString("endpoint")
 	log.WithFields(log.Fields{
 		"base":    base,
 		"section": section,
@@ -61,8 +69,8 @@ func URLHelper(base, section, command string) (string, error) {
 }
 
 // GetJSONRequest returns a request prepared for default JSON resposes
-func GetJSONRequest() *resty.Request {
-	request := GetRequest().
+func GetJSONRequestTimeout(timeout time.Duration) *resty.Request {
+	request := GetRequestTimeout(timeout).
 		SetResult(Response{}).
 		SetError(Response{})
 	if RawJSON {
@@ -72,12 +80,22 @@ func GetJSONRequest() *resty.Request {
 	return request
 }
 
+func GetJSONRequest() *resty.Request {
+	return GetJSONRequestTimeout(DefaultTimeout)
+}
+
 // GetRequest returns a resty.Request object prepared for an API call
-func GetRequest() *resty.Request {
+func GetRequestTimeout(timeout time.Duration) *resty.Request {
 	apiToken := viper.GetString("api-token")
 
 	if client == nil {
 		client = resty.New()
+
+		// Default is no timeout. This can lead to lockup the CLI
+		// in case the server does not respond. Set a somewhat low
+		// timeout for our local only use case.
+		client.SetTimeout(timeout)
+
 		// Registering Response Middleware
 		client.OnAfterResponse(func(c *resty.Client, resp *resty.Response) error {
 			// explore response object
@@ -144,4 +162,8 @@ func ShowJSONResponse(resp *resty.Response) (success bool) {
 		fmt.Print(string(d))
 	}
 	return
+}
+
+func GetRequest() *resty.Request {
+	return GetRequestTimeout(DefaultTimeout)
 }

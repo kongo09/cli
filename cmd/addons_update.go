@@ -8,7 +8,6 @@ import (
 	helper "github.com/home-assistant/cli/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var addonsUpdateCmd = &cobra.Command{
@@ -28,9 +27,8 @@ It is currently not possible to upgrade/downgrade to a specific version.
 
 		section := "addons"
 		command := "{slug}/update"
-		base := viper.GetString("endpoint")
 
-		url, err := helper.URLHelper(base, section, command)
+		url, err := helper.URLHelper(section, command)
 		if err != nil {
 			fmt.Println(err)
 			ExitWithError = true
@@ -46,6 +44,19 @@ It is currently not possible to upgrade/downgrade to a specific version.
 		request.SetPathParams(map[string]string{
 			"slug": slug,
 		})
+
+		options := make(map[string]interface{})
+
+		backup, _ := cmd.Flags().GetBool("backup")
+		if cmd.Flags().Changed("backup") {
+			request.SetBody(options)
+			options["backup"] = backup
+		}
+
+		if len(options) > 0 {
+			log.WithField("options", options).Debug("Request body")
+			request.SetBody(options)
+		}
 
 		resp, err := request.Post(url)
 
@@ -70,6 +81,6 @@ It is currently not possible to upgrade/downgrade to a specific version.
 }
 
 func init() {
-
+	addonsUpdateCmd.Flags().Bool("backup", false, "Create partial backup before update")
 	addonsCmd.AddCommand(addonsUpdateCmd)
 }

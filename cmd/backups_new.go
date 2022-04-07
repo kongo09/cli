@@ -6,27 +6,25 @@ import (
 	helper "github.com/home-assistant/cli/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var snapshotsNewCmd = &cobra.Command{
+var backupsNewCmd = &cobra.Command{
 	Use:     "new",
 	Aliases: []string{"create", "backup"},
-	Short:   "Create a new Home Assistant snapshot backup",
+	Short:   "Create a new Home Assistant backup",
 	Long: `
 This command can be used to trigger the creation of a new Home Assistant
-snapshot containing a backup of your Home Assistant system.`,
+backup.`,
 	Example: `
-  ha snapshots new
-  ha snapshots new --addons core_ssh --addons core_mosquitto
-  ha snapshots new --folders homeassistant
+  ha backups new
+  ha backups new --addons core_ssh --addons core_mosquitto
+  ha backups new --folders homeassistant
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.WithField("args", args).Debug("snapshots new")
+		log.WithField("args", args).Debug("backups new")
 
-		section := "snapshots"
+		section := "backups"
 		command := "new/full"
-		base := viper.GetString("endpoint")
 
 		options := make(map[string]interface{})
 
@@ -57,7 +55,7 @@ snapshot containing a backup of your Home Assistant system.`,
 		}
 
 		ProgressSpinner.Start()
-		resp, err := helper.GenericJSONPost(base, section, command, options)
+		resp, err := helper.GenericJSONPostTimeout(section, command, options, helper.BackupTimeout)
 		ProgressSpinner.Stop()
 		if err != nil {
 			fmt.Println(err)
@@ -69,10 +67,10 @@ snapshot containing a backup of your Home Assistant system.`,
 }
 
 func init() {
-	snapshotsNewCmd.Flags().StringP("name", "", "", "Name of the snapshot")
-	snapshotsNewCmd.Flags().StringP("password", "", "", "Password")
-	snapshotsNewCmd.Flags().StringArrayP("addons", "a", []string{}, "addons to backup, triggers a partial backup")
-	snapshotsNewCmd.Flags().StringArrayP("folders", "f", []string{}, "folders to backup, triggers a partial backup")
+	backupsNewCmd.Flags().StringP("name", "", "", "Name of the backup")
+	backupsNewCmd.Flags().StringP("password", "", "", "Password")
+	backupsNewCmd.Flags().StringArrayP("addons", "a", []string{}, "addons to backup, triggers a partial backup")
+	backupsNewCmd.Flags().StringArrayP("folders", "f", []string{}, "folders to backup, triggers a partial backup")
 
-	snapshotsCmd.AddCommand(snapshotsNewCmd)
+	backupsCmd.AddCommand(backupsNewCmd)
 }

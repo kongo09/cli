@@ -8,7 +8,6 @@ import (
 	helper "github.com/home-assistant/cli/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var addonsInstalCmd = &cobra.Command{
@@ -27,16 +26,15 @@ This command allows you to install a Home Assistant add-on from the commandline.
 
 		section := "addons"
 		command := "{slug}/install"
-		base := viper.GetString("endpoint")
 
-		url, err := helper.URLHelper(base, section, command)
+		url, err := helper.URLHelper(section, command)
 		if err != nil {
 			fmt.Println(err)
 			ExitWithError = true
 			return
 		}
 
-		request := helper.GetJSONRequest()
+		request := helper.GetJSONRequestTimeout(helper.ContainerDownloadTimeout)
 
 		slug := args[0]
 

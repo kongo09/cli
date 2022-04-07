@@ -7,7 +7,6 @@ import (
 	helper "github.com/home-assistant/cli/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var supervisorOptionsCmd = &cobra.Command{
@@ -24,7 +23,6 @@ Supervisor running on your Home Assistant system.`,
 
 		section := "supervisor"
 		command := "options"
-		base := viper.GetString("endpoint")
 
 		options := make(map[string]interface{})
 
@@ -65,7 +63,7 @@ Supervisor running on your Home Assistant system.`,
 			options["addons_repositories"] = repos
 		}
 
-		resp, err := helper.GenericJSONPost(base, section, command, options)
+		resp, err := helper.GenericJSONPost(section, command, options)
 		if err != nil {
 			fmt.Println(err)
 			ExitWithError = true
@@ -81,15 +79,11 @@ func init() {
 	supervisorOptionsCmd.Flags().StringP("timezone", "t", "", "Timezone")
 	supervisorOptionsCmd.Flags().StringP("logging", "l", "", "Logging: debug|info|warning|error|critical")
 	supervisorOptionsCmd.Flags().IntP("wait-boot", "w", 0, "Seconds to wait after boot")
-	supervisorOptionsCmd.Flags().BoolP("content-trust", "", true, "Enable/Disable content-trust on the backend")
-	supervisorOptionsCmd.Flags().BoolP("force-security", "", false, "Enable/Disable force-security on the backend")
 	supervisorOptionsCmd.Flags().BoolP("debug", "", false, "Enable debug mode")
 	supervisorOptionsCmd.Flags().BoolP("debug-block", "", false, "Enable debug mode with blocking startup")
 	supervisorOptionsCmd.Flags().BoolP("diagnostics", "", false, "Enable diagnostics mode")
 	supervisorOptionsCmd.Flags().StringArrayP("repositories", "r", []string{}, "repositories to track, can be supplied multiple times")
 
-	supervisorOptionsCmd.Flags().Lookup("content-trust").NoOptDefVal = "true"
-	supervisorOptionsCmd.Flags().Lookup("force-security").NoOptDefVal = "false"
 	supervisorOptionsCmd.Flags().Lookup("debug").NoOptDefVal = "false"
 	supervisorOptionsCmd.Flags().Lookup("debug-block").NoOptDefVal = "false"
 	supervisorOptionsCmd.Flags().Lookup("diagnostics").NoOptDefVal = "false"

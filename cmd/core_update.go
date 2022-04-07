@@ -6,7 +6,6 @@ import (
 	helper "github.com/home-assistant/cli/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var coreUpdateCmd = &cobra.Command{
@@ -24,17 +23,21 @@ running on your system to the latest version or the version specified.`,
 
 		section := "core"
 		command := "update"
-		base := viper.GetString("endpoint")
 
-		var options map[string]interface{}
+		options := make(map[string]interface{})
 
 		version, _ := cmd.Flags().GetString("version")
 		if version != "" {
-			options = map[string]interface{}{"version": version}
+			options["version"] = version
+		}
+
+		backup, _ := cmd.Flags().GetBool("backup")
+		if cmd.Flags().Changed("backup") {
+			options["backup"] = backup
 		}
 
 		ProgressSpinner.Start()
-		resp, err := helper.GenericJSONPost(base, section, command, options)
+		resp, err := helper.GenericJSONPostTimeout(section, command, options, helper.ContainerDownloadTimeout)
 		ProgressSpinner.Stop()
 		if err != nil {
 			fmt.Println(err)
@@ -47,5 +50,6 @@ running on your system to the latest version or the version specified.`,
 
 func init() {
 	coreUpdateCmd.Flags().StringP("version", "", "", "Version to update to")
+	coreUpdateCmd.Flags().Bool("backup", false, "Create partial backup before update")
 	coreCmd.AddCommand(coreUpdateCmd)
 }
